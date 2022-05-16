@@ -43,7 +43,7 @@
                             <td>{{$details->name}}</td>
                             <td>{{$details->price}}</td>
                             <td>
-                                <a href="/pay/{{$details->id}}">
+                                <a href="/payment/{{$details->id}}">
                                     <button class="btn btn-danger">Pay Now</button>
                                 </a>
                             </td>

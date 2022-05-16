@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
+use Illuminate\Http\Request;
+use App\Models\Product;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,13 +24,19 @@ Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth'])->name('dashboard');
 
-Route::get('/payment', function () {
-    dd(auth()->user()->createSetupIntent());
+Route::get('/payment/{id}', function ($id) {
     return view('payment',[
         'intent' => auth()->user()->createSetupIntent(),
+        'product_id' =>  $id,
+        'productData' => Product::whereId($id)->first(),
     ]);
 })->middleware(['auth'])->name('payment');
 
+Route::post('/payment', function (Request $request) {
+   return view('list', [
+       'products' => Product::all(),
+   ]);
+})->middleware(['auth'])->name('payment');
 
 require __DIR__.'/auth.php';
 

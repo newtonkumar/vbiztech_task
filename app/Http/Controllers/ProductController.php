@@ -16,13 +16,15 @@ class ProductController extends Controller
         return view('list', compact('products'));
     }
 
-    public function payment($productId, Request $request) {
-        $productData = Product::whereId($productId)->first();
-        
+    public function payment(Request $request) {
         if ($request->isMethod('post')) {
+            $amount = $request->price;
+            $paymentMethod = $request->payment_method;
 
+            $authUser = auth()->user();
+            $authUser->charge($amount, $paymentMethod);
         }
 
-        return view('payment', compact('productData'));
+        return view('list');
     }
 }
