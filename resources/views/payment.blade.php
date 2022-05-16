@@ -23,12 +23,10 @@
                         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                                 <div class="p-6 bg-white border-b border-gray-200">
-                                    <form name="order" id="payment-form" method="post" action="{{route('payment')}}" data-secret="{{$intent->client_secret}}">
+                                    <form name="order" id="payment-form" method="post" action="{{ route('charge')}}" data-secret="{{$intent->client_secret}}">
                                         {{ csrf_field() }}
                                         <div class="mb-4">
-                                            <input type="hidden" value="{{$product_id}}" id="" name="product_id">
-                                            <x-input type="hidden" value="{{$productData->price}}" id="" name="price"/>
-                                            <x-input type="hidden" value="card" id="payment_method" name="payment_method"/>
+                                            <x-input type="hidden" value="{{$productData->price}}" id="" name="amount"/>
                                         </div>
                                         <div>
                                             <x-label for="card-holder-name" value="Card Holder Name"/>
@@ -37,7 +35,7 @@
                                         <x-label for="card-element" value="Credit Card Or Debit card"/><br>
                                         <div id="card-element"></div><br>
                                         <div id="card-errors" role="alert"></div>
-                                        <x-button type="submit" id="submit-button">Buy Now</x-button>     
+                                        <x-button data-secret="{{$intent->client_secret}}" type="submit" id="submit-button">Buy Now</x-button>     
                                     </form>
                                 </div>
                             </div>
@@ -52,7 +50,6 @@
     <script>
         // Create a Stripe client.
         var stripe = Stripe('{{ env("STRIPE_KEY") }}');
-
         // Create an instance of Elements.
         var elements = stripe.elements();
 
@@ -76,21 +73,42 @@
         };
 
         // Create an instance of the card Element.
-        var card = elements.create('card', {style: style});
-
+        var card = elements.create('card', {hidePostalCode: true, style: style});
         // Add an instance of the card Element into the `card-element` <div>.
         card.mount('#card-element');
 
+         // Handle real-time validation errors from the card Element.
+         card.addEventListener('change', function(event) {
+            var displayError = document.getElementById('card-errors');
+            if (event.error) {
+                displayError.textContent = event.error.message;
+            } else {
+                displayError.textContent = '';
+            }
+        });
+        const cardHolderName = document.getElementById('card-holder-name');
         const cardButton = document.getElementById('submit-button')
-
-        // Handle real-time validation errors from the card Element.
-        card.addEventListener('change', function(event) {
-        var displayError = document.getElementById('card-errors');
-        if (event.error) {
-            displayError.textContent = event.error.message;
-        } else {
-            displayError.textContent = '';
-        }
+        const clientSecret = cardButton.dataset.secret;
+    
+        cardButton.addEventListener('click', async (e) => {
+            console.log('attempting');
+            event.preventDefault();
+            const {setupIntent, error} = await stripe.confirmCardSetup(
+                clientSecret, {
+                    payment_method: {
+                        card: card,
+                        billing_details: {
+                            name: cardHolderName.value
+                        }
+                    }
+                }
+            );
+            if (error) {
+                var errorElement = document.getElementById('card-errors');
+                errorElement.textContent = error.message;
+            } else {
+                paymentMethodHandler(setupIntent.payment_method);
+            }
         });
 
         // Handle form submission.
@@ -117,6 +135,19 @@
             hiddenInput.setAttribute('type', 'hidden');
             hiddenInput.setAttribute('name', 'stripeToken');
             hiddenInput.setAttribute('value', token.id);
+            form.appendChild(hiddenInput);
+
+            // Submit the form
+            //form.submit();
+        }
+
+        function paymentMethodHandler(payment_method) {
+            // Insert the token ID into the form so it gets submitted to the server
+            var form = document.getElementById('payment-form');
+            var hiddenInput = document.createElement('input');
+            hiddenInput.setAttribute('type', 'hidden');
+            hiddenInput.setAttribute('name', 'payment_method');
+            hiddenInput.setAttribute('value', payment_method);
             form.appendChild(hiddenInput);
 
             // Submit the form

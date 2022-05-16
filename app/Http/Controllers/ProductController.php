@@ -16,15 +16,25 @@ class ProductController extends Controller
         return view('list', compact('products'));
     }
 
-    public function payment(Request $request) {
+    public function payment($id, Request $request) {
+        $intent = auth()->user()->createSetupIntent();
+        $product_id =  $id;
+        $productData = Product::whereId($id)->first();
+
+        return view('payment', compact('intent', 'product_id', 'productData'));
+    }
+
+    public function charge(Request $request) {
         if ($request->isMethod('post')) {
-            $amount = $request->price;
+            $amount = (int)($request->amount) * 100;
             $paymentMethod = $request->payment_method;
-
+            
             $authUser = auth()->user();
-            $authUser->charge($amount, $paymentMethod);
-        }
+            $authUser->createOrGetStripeCustomer();
+            $paymentMethodD = $authUser->addPaymentMethod($paymentMethod);
+            $authUser->charge($amount, $paymentMethodD->id, ['off_session' => true, 'currency' => 'INR']);
 
-        return view('list');
+            return redirect('/list')->with('status', "Payment done successfully");
+        }
     }
 }
