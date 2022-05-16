@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProductController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,4 +22,15 @@ Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth'])->name('dashboard');
 
+Route::get('/payment', function () {
+    dd(auth()->user()->createSetupIntent());
+    return view('payment',[
+        'intent' => auth()->user()->createSetupIntent(),
+    ]);
+})->middleware(['auth'])->name('payment');
+
+
 require __DIR__.'/auth.php';
+
+Route::any('/list',[ProductController::class, 'index']);
+Route::any('pay/{id}',[ProductController::class, 'payment']);
